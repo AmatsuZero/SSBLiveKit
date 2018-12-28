@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'SSBLiveKit_Example' do
+  pod 'SSBLiveKit', :path => '../'
+
+  target 'SSBLiveKit_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end
