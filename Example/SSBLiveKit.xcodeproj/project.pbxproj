@@ -29,8 +29,8 @@
 
 /* Begin PBXFileReference section */
 		45B6D7E9EB27E4096F3C8D16 /* Pods-SSBLiveKit_Example.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SSBLiveKit_Example.debug.xcconfig"; path = "Target Support Files/Pods-SSBLiveKit_Example/Pods-SSBLiveKit_Example.debug.xcconfig"; sourceTree = "<group>"; };
-		4BDC008F73EAAD51CA1D4D8A /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
-		4C3FA30AB677485B7077BBAB /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; name = README.md; path = ../README.md; sourceTree = "<group>"; };
+		4BDC008F73EAAD51CA1D4D8A /* LICENSE */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = LICENSE; path = ../LICENSE; sourceTree = "<group>"; };
+		4C3FA30AB677485B7077BBAB /* README.md */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		59E9551AA82C67F917C08501 /* Pods-SSBLiveKit_Tests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SSBLiveKit_Tests.release.xcconfig"; path = "Target Support Files/Pods-SSBLiveKit_Tests/Pods-SSBLiveKit_Tests.release.xcconfig"; sourceTree = "<group>"; };
 		607FACD01AFB9204008FA782 /* SSBLiveKit_Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SSBLiveKit_Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		607FACD41AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -43,7 +43,7 @@
 		607FACEA1AFB9204008FA782 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		607FACEB1AFB9204008FA782 /* Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests.swift; sourceTree = "<group>"; };
 		6BB36EDF4FAF221734547D7C /* Pods_SSBLiveKit_Example.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_SSBLiveKit_Example.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		6EDBFA24CA80206C9D7CA900 /* SSBLiveKit.podspec */ = {isa = PBXFileReference; includeInIndex = 1; name = SSBLiveKit.podspec; path = ../SSBLiveKit.podspec; sourceTree = "<group>"; };
+		6EDBFA24CA80206C9D7CA900 /* SSBLiveKit.podspec */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text; name = SSBLiveKit.podspec; path = ../SSBLiveKit.podspec; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.ruby; };
 		8A5E77431EEA9D3F15288C21 /* Pods-SSBLiveKit_Example.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SSBLiveKit_Example.release.xcconfig"; path = "Target Support Files/Pods-SSBLiveKit_Example/Pods-SSBLiveKit_Example.release.xcconfig"; sourceTree = "<group>"; };
 		A1F348EBFDA862BA0C8566CB /* Pods-SSBLiveKit_Tests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SSBLiveKit_Tests.debug.xcconfig"; path = "Target Support Files/Pods-SSBLiveKit_Tests/Pods-SSBLiveKit_Tests.debug.xcconfig"; sourceTree = "<group>"; };
 		FB844C3717022BFF404ED908 /* Pods_SSBLiveKit_Tests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_SSBLiveKit_Tests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -77,7 +77,6 @@
 				A1F348EBFDA862BA0C8566CB /* Pods-SSBLiveKit_Tests.debug.xcconfig */,
 				59E9551AA82C67F917C08501 /* Pods-SSBLiveKit_Tests.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -271,12 +270,18 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-SSBLiveKit_Example/Pods-SSBLiveKit_Example-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/GPUImage/GPUImage.framework",
+				"${BUILT_PRODUCTS_DIR}/SSBEncoder/SSBEncoder.framework",
+				"${BUILT_PRODUCTS_DIR}/SSBFilter/SSBFilter.framework",
 				"${BUILT_PRODUCTS_DIR}/SSBLiveKit/SSBLiveKit.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GPUImage.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SSBEncoder.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SSBFilter.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SSBLiveKit.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -1,0 +1,31 @@
+PODS:
+  - GPUImage (0.1.7)
+  - SSBEncoder (0.1.0)
+  - SSBFilter (0.1.0):
+    - GPUImage (~> 0.1.7)
+  - SSBLiveKit (0.1.0):
+    - SSBEncoder (~> 0.1.0)
+    - SSBFilter (~> 0.1.0)
+
+DEPENDENCIES:
+  - SSBLiveKit (from `../`)
+
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - GPUImage
+    - SSBEncoder
+    - SSBFilter
+
+EXTERNAL SOURCES:
+  SSBLiveKit:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  GPUImage: 733a5f0fab92df9de1c37ba9df520a833ccb406d
+  SSBEncoder: 4afb34821d071fad21704dc3f2b8ee52f95a110d
+  SSBFilter: 3c47e59ffe026347bbd03fd22248434346a63443
+  SSBLiveKit: 6f22bf7ffa02b7cd61b262400365d00b530710dc
+
+PODFILE CHECKSUM: 8612a22af5e73554a54749a8da91ac82af9f5d8a
+
+COCOAPODS: 1.6.0.beta.2
