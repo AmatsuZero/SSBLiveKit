@@ -6,9 +6,11 @@
 //
 
 import Foundation
-import SSBEncoder
 import AudioToolbox
 import AVFoundation
+import GPUImage
+import SSBEncoder
+import SSBFilter
 
 /// LFAudioCapture callback audioData
 @objc public protocol SSBAudioCaptureDelegate: NSObjectProtocol {
@@ -243,6 +245,278 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
     }
 }
 
+@objc public protocol SSBVideoCaptureDelegate: NSObjectProtocol {
+    @objc func captureOutput(_ capture: SSBVideoCapture, pixelBuffer: CVPixelBuffer)
+}
+
+@objcMembers open class SSBVideoCapture: NSObject {
+    
+    /// The delegate of the capture. captureData callback
+    public weak var delegate: SSBVideoCaptureDelegate?
+    ///  The running control start capture or stop capture
+    public var isRunning = false {
+        willSet {
+            guard isRunning != newValue else {
+                return
+            }
+            UIApplication.shared.isIdleTimerDisabled = newValue
+            if newValue {
+                reloadFilter()
+                videoCamera?.startCapture()
+                if saveLocalVideo {
+                    movieWriter?.startRecording()
+                }
+            } else {
+                videoCamera?.stopCapture()
+                if saveLocalVideo {
+                    movieWriter?.finishRecording()
+                }
+            }
+        }
+    }
+    /// The preView will show OpenGL ES view
+    public var preView: UIView! {
+        set {
+            if gpuImageView?.superview != nil {
+                gpuImageView?.removeFromSuperview()
+            }
+            if let imageView = gpuImageView {
+                newValue.insertSubview(imageView, at: 0)
+            }
+            gpuImageView?.frame = .init(origin: .zero, size: newValue.frame.size)
+        }
+        get {
+            return gpuImageView?.superview
+        }
+    }
+    /// The captureDevicePosition control camraPosition ,default front
+    public var captureDevicePosition: AVCaptureDevice.Position {
+        set {
+            guard newValue != captureDevicePosition else {
+                return
+            }
+            videoCamera?.rotateCamera()
+            videoCamera?.frameRate = Int32(configuration.videoFrameRate)
+            reloadMirror()
+        }
+        get {
+            return videoCamera?.cameraPosition() ?? .front
+        }
+    }
+    /// The beautyFace control capture shader filter empty or beautiy
+    public var beautyFace = true
+    ///  The torch control capture flash is on or off
+    public var useTorch: Bool {
+        set {
+            guard let captureSession = videoCamera?.captureSession else {
+                return
+            }
+            captureSession.beginConfiguration()
+            if let inputCamera = videoCamera?.inputCamera {
+                if inputCamera.isTorchAvailable {
+                    do {
+                        try inputCamera.lockForConfiguration()
+                        try inputCamera.setTorchModeOn(level: Float(newValue
+                            ? AVCaptureDevice.TorchMode.on.rawValue
+                            : AVCaptureDevice.TorchMode.off.rawValue))
+                        inputCamera.unlockForConfiguration()
+                    } catch {
+                        print("Error while locking device for torch: \(error.localizedDescription)")
+                    }
+                } else {
+                    print("Torch not available in current camera input")
+                }
+            }
+            captureSession.commitConfiguration()
+        }
+        get {
+            return videoCamera?.inputCamera.torchMode != .off
+        }
+    }
+    /// The mirror control mirror of front camera is on or off
+    public var isMirror = true
+    /// The beautyLevel control beautyFace Level, default 0.5, between 0.0 ~ 1.0
+    public var beautyLevel: CGFloat = 0.5 {
+        didSet {
+            reloadFilter()
+        }
+    }
+    /// The brightLevel control brightness Level, default 0.5, between 0.0 ~ 1.0
+    public var brightLevel: CGFloat = 0.5 {
+        didSet {
+            if let filter = beautyFilter {
+                filter.bright = brightLevel
+            }
+        }
+    }
+    /// The torch control camera zoom scale default 1.0, between 1.0 ~ 3.0
+    public var zoomScale: CGFloat = 1 {
+        didSet {
+            if let inputCamera = videoCamera?.inputCamera {
+                do {
+                    try inputCamera.lockForConfiguration()
+                    inputCamera.videoZoomFactor = zoomScale
+                    inputCamera.unlockForConfiguration()
+                } catch {
+                    print("Error while locking device for torch: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    /// The videoFrameRate control videoCapture output data count
+    public var videoFrameRate: Int {
+        set {
+            guard newValue > 0,
+                Int(videoCamera?.frameRate ?? 0) != newValue else {
+                    return
+            }
+            videoCamera?.frameRate = Int32(newValue)
+        }
+        get {
+            return Int(videoCamera?.frameRate ?? 0)
+        }
+    }
+    private var _warterMarkView: UIView?
+    /// The warterMarkView control whether the watermark is displayed or not ,if set nil,will remove watermark,otherwise add
+    public var warterMarkView: UIView? {
+        set {
+            if _warterMarkView != nil, _warterMarkView?.superview != nil {
+                _warterMarkView?.removeFromSuperview()
+            }
+            if let view = newValue {
+                _warterMarkView = view
+                blendFilter.mix = view.alpha
+                watermarkContentView.addSubview(view)
+                reloadFilter()
+            }
+        }
+        get {
+            return _warterMarkView
+        }
+    }
+    
+    /// The currentImage is videoCapture shot
+    public var currentImage: UIImage? {
+        if let filter = filter {
+            filter.useNextFrameForImageCapture()
+            return filter.imageFromCurrentFramebuffer()
+        }
+        return nil
+    }
+    /// The saveLocalVideo is save the local video
+    public var saveLocalVideo = false
+    /// The saveLocalVideoPath is save the local video  path
+    public var saveLocalVideoPath: URL?
+    private let configuration: SSBVideoConfiguration
+    
+    private lazy var videoCamera: GPUImageVideoCamera? = {
+        let camera = GPUImageVideoCamera(sessionPreset: configuration.avSessionPresset.rawValue,
+                                         cameraPosition: captureDevicePosition)
+        camera?.outputImageOrientation = configuration.outputImageOrientation
+        camera?.horizontallyMirrorFrontFacingCamera = false
+        camera?.horizontallyMirrorRearFacingCamera = false
+        camera?.frameRate = Int32(configuration.videoFrameRate)
+        return camera
+    }()
+    
+    private var beautyFilter: SSBBeautyFilter?
+    private var filter: GPUImageOutput?
+    private var cropFilter: GPUImageCropFilter?
+    private var output: GPUImageOutput?
+    private lazy var gpuImageView: GPUImageView? = {
+        let view = GPUImageView(frame: UIScreen.main.bounds)
+        view.fillMode = kGPUImageFillModePreserveAspectRatioAndFill
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        return view
+    }()
+    private lazy var blendFilter: GPUImageAlphaBlendFilter = {
+        let filter = GPUImageAlphaBlendFilter()
+        filter.mix = 1
+        filter.disableSecondFrameCheck()
+        return filter
+    }()
+    private lazy var uiElementInput: GPUImageUIElement? = {
+        let input = GPUImageUIElement(view: watermarkContentView)
+        return input
+    }()
+    private lazy var watermarkContentView: UIView = {
+        let view = UIView(frame: CGRect(origin: .zero, size: configuration.videoSize))
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        return view
+    }()
+    private lazy var movieWriter: GPUImageMovieWriter? = {
+        guard let url = saveLocalVideoPath else {
+            return nil
+        }
+        let writer = GPUImageMovieWriter(movieURL: url, size: configuration.videoSize)
+        writer?.encodingLiveVideo = true
+        writer?.shouldPassthroughAudio = true
+        videoCamera?.audioEncodingTarget = writer
+        return writer
+    }()
+    
+    public init(videoConfiguration: SSBVideoConfiguration) {
+        configuration = videoConfiguration
+        super.init()
+        let center = NotificationCenter.default
+        center.addObserver(self, selector: #selector(SSBVideoCapture.willEnterBackground(_:)),
+                           name: .UIApplicationWillResignActive,
+                           object: nil)
+        center.addObserver(self, selector: #selector(SSBVideoCapture.willEnterForeground(_:)),
+                           name: .UIApplicationDidBecomeActive,
+                           object: nil)
+        center.addObserver(self, selector: #selector(SSBVideoCapture.statusBarChanged(_:)),
+                           name: .UIApplicationWillChangeStatusBarOrientation,
+                           object: nil)
+    }
+    
+    deinit {
+        UIApplication.shared.isIdleTimerDisabled = false
+        NotificationCenter.default.removeObserver(self)
+        videoCamera?.stopCapture()
+        if let image = gpuImageView {
+            image.removeFromSuperview()
+            gpuImageView = nil
+        }
+    }
+    
+    // MARK: - Notification Handler
+    @objc private func willEnterBackground(_ notification: Notification)  {
+        UIApplication.shared.isIdleTimerDisabled = false
+        videoCamera?.pauseCapture()
+        runSynchronouslyOnContextQueue(nil) {
+            glFinish()
+        }
+        
+    }
+    
+    @objc private func willEnterForeground(_ notifation: Notification) {
+        
+    }
+    
+    @objc private func statusBarChanged(_ notification: Notification) {
+        
+    }
+    
+    // MARK: - Custom Method
+    private func reloadFilter() {
+        filter?.removeAllTargets()
+        blendFilter.removeAllTargets()
+    }
+    
+    private func process(video: GPUImageOutput)  {
+        autoreleasepool { [weak self] in
+            if let buffer = self?.output?.framebufferForOutput()?.byteBuffer() {
+               
+            }
+        }
+    }
+    
+    private func reloadMirror() {
+        videoCamera?.horizontallyMirrorFrontFacingCamera = isMirror && captureDevicePosition == .front
+    }
+}
+
 extension NSString {
     @objc public static var SSBAudioComponentFailedToCreateNotification: String {
         return "AudioComponentFailedToCreateNotification"
@@ -255,3 +529,4 @@ extension Notification.Name {
         return .init(NSString.SSBAudioComponentFailedToCreateNotification)
     }
 }
+
