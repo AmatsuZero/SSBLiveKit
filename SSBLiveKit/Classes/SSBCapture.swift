@@ -420,9 +420,9 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
     }()
     
     private var beautyFilter: SSBBeautyFilter?
-    private var filter: GPUImageOutput?
+    private var filter: (GPUImageOutput & GPUImageInput)? // Swift4 声明方法
     private var cropFilter: GPUImageCropFilter?
-    private var output: GPUImageOutput?
+    private var output: (GPUImageOutput & GPUImageInput)?
     private lazy var gpuImageView: GPUImageView? = {
         let view = GPUImageView(frame: UIScreen.main.bounds)
         view.fillMode = kGPUImageFillModePreserveAspectRatioAndFill
@@ -491,23 +491,99 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
     }
     
     @objc private func willEnterForeground(_ notifation: Notification) {
-        
+        videoCamera?.resumeCameraCapture()
+        UIApplication.shared.isIdleTimerDisabled = true
     }
     
     @objc private func statusBarChanged(_ notification: Notification) {
-        
+        print("UIApplicationWillChangeStatusBarOrientationNotification. UserInfo: \(notification.userInfo ?? [:])")
+        guard configuration.isAutorotate else {
+            return
+        }
+        switch UIApplication.shared.statusBarOrientation {
+        case .landscapeLeft where configuration.isLandscape:
+            videoCamera?.outputImageOrientation = .landscapeRight
+        case .landscapeRight where configuration.isLandscape:
+            videoCamera?.outputImageOrientation = .landscapeLeft
+        case .portrait where !configuration.isLandscape:
+            videoCamera?.outputImageOrientation = .portraitUpsideDown
+        case .portraitUpsideDown where !configuration.isLandscape:
+            videoCamera?.outputImageOrientation = .portrait
+        default:
+            break
+        }
     }
     
     // MARK: - Custom Method
     private func reloadFilter() {
         filter?.removeAllTargets()
         blendFilter.removeAllTargets()
+        uiElementInput?.removeAllTargets()
+        videoCamera?.removeAllTargets()
+        output?.removeAllTargets()
+        cropFilter?.removeAllTargets()
+        
+        if beautyFace {
+            output = SSBEmptyFilter()
+            filter = SSBBeautyFilter()
+            beautyFilter = filter as? SSBBeautyFilter
+        } else {
+            output = SSBEmptyFilter()
+            filter = SSBEmptyFilter()
+            beautyFilter = nil
+        }
+        
+        // 调节镜像
+        reloadMirror()
+        
+        // 480*640 比例为4:3  强制转换为16:9
+        if configuration.avSessionPresset == .vga640x480 {
+            let cropRect = configuration.isLandscape
+                ? CGRect(x: 0, y: 0.125, width: 1, height: 0.75)
+                : CGRect(x: 0.125, y: 0, width: 0.75, height: 1)
+            cropFilter = GPUImageCropFilter(cropRegion: cropRect)
+            videoCamera?.addTarget(cropFilter)
+            cropFilter?.addTarget(filter!)
+        } else {
+            videoCamera?.addTarget(filter!)
+        }
+        
+        // 添加水印
+        if warterMarkView != nil {
+            filter?.addTarget(blendFilter)
+            uiElementInput?.addTarget(blendFilter)
+            blendFilter.addTarget(gpuImageView)
+            if saveLocalVideo {
+                blendFilter.addTarget(movieWriter)
+            }
+            filter?.addTarget(output)
+            uiElementInput?.update()
+        } else {
+            filter?.addTarget(output)
+            output?.addTarget(gpuImageView)
+            if saveLocalVideo {
+                output?.addTarget(movieWriter)
+            }
+        }
+        
+        filter?.forceProcessing(at: configuration.videoSize)
+        output?.forceProcessing(at: configuration.videoSize)
+        blendFilter.forceProcessing(at: configuration.videoSize)
+        uiElementInput?.forceProcessing(at: configuration.videoSize)
+        
+        // 输出数据
+        output?.frameProcessingCompletionBlock = { [weak self] (output, _) in
+            self?.process(video: output)
+        }
     }
     
-    private func process(video: GPUImageOutput)  {
+    private func process(video: GPUImageOutput?)  {
         autoreleasepool { [weak self] in
-            if let buffer = self?.output?.framebufferForOutput()?.byteBuffer() {
-               
+            if let self = self,
+                let buffer = video?.framebufferForOutput()?.pixelBuffer?.takeUnretainedValue(),
+                let delegate = delegate,
+                delegate.responds(to: #selector(SSBVideoCaptureDelegate.captureOutput(_:pixelBuffer:))) {
+               delegate.captureOutput(self, pixelBuffer: buffer)
             }
         }
     }
@@ -530,3 +606,16 @@ extension Notification.Name {
     }
 }
 
+extension GPUImageFramebuffer {
+    var pixelBuffer: Unmanaged<CVPixelBuffer>? {// Core Foundation对象要用Unmanged来管理
+        // 仅适用于iOS或者iPhone模拟器
+        #if ((arch(i386) || arch(x86_64)) && os(iOS)) || os(iOS)
+        guard let ivar = class_getInstanceVariable(GPUImageFramebuffer.self, "renderTarget") else {
+            return nil
+        }
+        return object_getIvar(self, ivar) as? Unmanaged<CVPixelBuffer>
+        #else
+        return nil
+        #endif
+    }
+}
