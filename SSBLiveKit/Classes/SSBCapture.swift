@@ -13,7 +13,7 @@ import SSBEncoder
 import SSBFilter
 
 /// LFAudioCapture callback audioData
-@objc public protocol SSBAudioCaptureDelegate: NSObjectProtocol {
+@objc protocol SSBAudioCaptureDelegate: NSObjectProtocol {
     @objc func capture(_ capture: SSBAudioCapture, audioData: Data?)
 }
 
@@ -61,13 +61,13 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
     }
 }
 
-@objcMembers open class SSBAudioCapture: NSObject {
+class SSBAudioCapture: NSObject {
     /// The delegate of the capture. captureData callback
-    public weak var delegate: SSBAudioCaptureDelegate?
+    weak var delegate: SSBAudioCaptureDelegate?
     /// The muted control callbackAudioData,muted will memset
-    public var isMuted = false
+    var isMuted = false
     /// The running control start capture or stop capture
-    public var isRunning = false {
+    var isRunning = false {
         willSet {
             guard isRunning != newValue else {
                 return
@@ -101,7 +101,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
     private let taskQueue = DispatchQueue(label: "com.ssb.SSBLiveKit.audioCapture.Queue")
     private let configuration: SSBLiveAudioConfiguration
     
-    public init(audioConfiguration: SSBLiveAudioConfiguration) {
+    init(audioConfiguration: SSBLiveAudioConfiguration) {
         configuration = audioConfiguration
         super.init()
         let session = AVAudioSession.sharedInstance()
@@ -245,16 +245,16 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
     }
 }
 
-@objc public protocol SSBVideoCaptureDelegate: NSObjectProtocol {
+@objc protocol SSBVideoCaptureDelegate: NSObjectProtocol {
     @objc func captureOutput(_ capture: SSBVideoCapture, pixelBuffer: CVPixelBuffer)
 }
 
-@objcMembers open class SSBVideoCapture: NSObject {
+@objcMembers class SSBVideoCapture: NSObject {
     
     /// The delegate of the capture. captureData callback
-    public weak var delegate: SSBVideoCaptureDelegate?
+    weak var delegate: SSBVideoCaptureDelegate?
     ///  The running control start capture or stop capture
-    public var isRunning = false {
+    var isRunning = false {
         willSet {
             guard isRunning != newValue else {
                 return
@@ -275,7 +275,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
         }
     }
     /// The preView will show OpenGL ES view
-    public var preView: UIView! {
+    var preView: UIView! {
         set {
             if gpuImageView?.superview != nil {
                 gpuImageView?.removeFromSuperview()
@@ -290,7 +290,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
         }
     }
     /// The captureDevicePosition control camraPosition ,default front
-    public var captureDevicePosition: AVCaptureDevice.Position {
+    var captureDevicePosition: AVCaptureDevice.Position {
         set {
             guard newValue != captureDevicePosition else {
                 return
@@ -304,9 +304,9 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
         }
     }
     /// The beautyFace control capture shader filter empty or beautiy
-    public var beautyFace = true
+    var beautyFace = true
     ///  The torch control capture flash is on or off
-    public var useTorch: Bool {
+    var useTorch: Bool {
         set {
             guard let captureSession = videoCamera?.captureSession else {
                 return
@@ -334,15 +334,15 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
         }
     }
     /// The mirror control mirror of front camera is on or off
-    public var isMirror = true
+    var isMirror = true
     /// The beautyLevel control beautyFace Level, default 0.5, between 0.0 ~ 1.0
-    public var beautyLevel: CGFloat = 0.5 {
+    var beautyLevel: CGFloat = 0.5 {
         didSet {
             reloadFilter()
         }
     }
     /// The brightLevel control brightness Level, default 0.5, between 0.0 ~ 1.0
-    public var brightLevel: CGFloat = 0.5 {
+    var brightLevel: CGFloat = 0.5 {
         didSet {
             if let filter = beautyFilter {
                 filter.bright = brightLevel
@@ -350,7 +350,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
         }
     }
     /// The torch control camera zoom scale default 1.0, between 1.0 ~ 3.0
-    public var zoomScale: CGFloat = 1 {
+    var zoomScale: CGFloat = 1 {
         didSet {
             if let inputCamera = videoCamera?.inputCamera {
                 do {
@@ -364,7 +364,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
         }
     }
     /// The videoFrameRate control videoCapture output data count
-    public var videoFrameRate: Int {
+    var videoFrameRate: Int {
         set {
             guard newValue > 0,
                 Int(videoCamera?.frameRate ?? 0) != newValue else {
@@ -378,7 +378,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
     }
     private var _warterMarkView: UIView?
     /// The warterMarkView control whether the watermark is displayed or not ,if set nil,will remove watermark,otherwise add
-    public var warterMarkView: UIView? {
+    var warterMarkView: UIView? {
         set {
             if _warterMarkView != nil, _warterMarkView?.superview != nil {
                 _warterMarkView?.removeFromSuperview()
@@ -396,7 +396,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
     }
     
     /// The currentImage is videoCapture shot
-    public var currentImage: UIImage? {
+    var currentImage: UIImage? {
         if let filter = filter {
             filter.useNextFrameForImageCapture()
             return filter.imageFromCurrentFramebuffer()
@@ -404,9 +404,9 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
         return nil
     }
     /// The saveLocalVideo is save the local video
-    public var saveLocalVideo = false
+    var saveLocalVideo = false
     /// The saveLocalVideoPath is save the local video  path
-    public var saveLocalVideoPath: URL?
+    var saveLocalVideoPath: URL?
     private let configuration: SSBVideoConfiguration
     
     private lazy var videoCamera: GPUImageVideoCamera? = {
@@ -455,7 +455,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
         return writer
     }()
     
-    public init(videoConfiguration: SSBVideoConfiguration) {
+    init(videoConfiguration: SSBVideoConfiguration) {
         configuration = videoConfiguration
         super.init()
         let center = NotificationCenter.default
@@ -583,7 +583,7 @@ private func handleInputBuffer(inRefCon: UnsafeMutableRawPointer,
                 let buffer = video?.framebufferForOutput()?.pixelBuffer?.takeUnretainedValue(),
                 let delegate = delegate,
                 delegate.responds(to: #selector(SSBVideoCaptureDelegate.captureOutput(_:pixelBuffer:))) {
-               delegate.captureOutput(self, pixelBuffer: buffer)
+                delegate.captureOutput(self, pixelBuffer: buffer)
             }
         }
     }
