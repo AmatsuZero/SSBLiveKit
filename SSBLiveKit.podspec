@@ -9,7 +9,7 @@
 Pod::Spec.new do |s|
   s.name             = 'SSBLiveKit'
   s.version          = '0.1.0'
-  s.summary          = 'A short description of SSBLiveKit.'
+  s.summary          = '一个直播SDK'
 
 # This description is used to generate tags and improve search results.
 #   * Think: What does it do? Why did you write it? What is the focus?
@@ -18,7 +18,7 @@ Pod::Spec.new do |s|
 #   * Finally, don't worry about the indent, CocoaPods strips it!
 
   s.description      = <<-DESC
-TODO: Add long description of the pod here.
+优酷来疯直播SDK的Swift实现
                        DESC
 
   s.homepage         = 'https://github.com/AmatsuZero/SSBLiveKit'
@@ -30,6 +30,7 @@ TODO: Add long description of the pod here.
   s.ios.deployment_target = '8.0'
   s.swift_version = '4.0'
   s.source_files = 'SSBLiveKit/Classes/**/*'
+  s.module_map = "SSBLiveKit/../module.modulemap"
   s.frameworks = 'VideoToolbox'
   s.dependency 'SSBEncoder', '~> 0.1.0'
   s.dependency 'SSBFilter', '~> 0.1.0'

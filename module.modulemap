@@ -1,0 +1,6 @@
+framework module SSBLiveKit {
+    umbrella header "SSBLiveKit-umbrella.h"
+    header "SSBEnum.h"
+    export *
+    module * { export * }
+}

@@ -56,7 +56,7 @@ import SSBEncoder
 
 @objcMembers public class SSBLiveStreamInfo: NSObject {
     /// 流状态
-    enum LiveState: Int {
+    @objc public enum LiveState: Int {
         /// 准备
         case ready = 0
         /// 连接中
