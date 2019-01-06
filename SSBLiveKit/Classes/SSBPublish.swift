@@ -260,7 +260,7 @@ class SSBStreamingBuffer {
     }
     
     private func isValidIndex(_ index: Int) -> Bool {
-        let i = index >= 0 ? index : list.count + index
+        let i = index >= 0 ? index : (list.count - 1 + index)
         return i >= 0 && i < list.count
     }
     

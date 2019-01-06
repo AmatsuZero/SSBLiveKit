@@ -142,8 +142,7 @@ class SSBAudioCapture: NSObject {
         desc.mFramesPerPacket = desc.mBytesPerFrame * desc.mFramesPerPacket
         
         var cb = AURenderCallbackStruct()
-        var mySelf = self
-        cb.inputProcRefCon = withUnsafeMutablePointer(to: &mySelf, { UnsafeMutableRawPointer($0)})
+        cb.inputProcRefCon = UnsafeMutableRawPointer(mutating: bridge(obj: self))
         cb.inputProc = handleInputBuffer
         AudioUnitSetProperty(componentsInstance, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &desc, UInt32(MemoryLayout.size(ofValue: desc)))
         AudioUnitSetProperty(componentsInstance, kAudioOutputUnitProperty_SetInputCallback, kAudioUnitScope_Global, 1, &cb, UInt32(MemoryLayout.size(ofValue: cb)))
@@ -618,4 +617,20 @@ extension GPUImageFramebuffer {
         return nil
         #endif
     }
+}
+
+func bridge<T : AnyObject>(obj : T) -> UnsafeRawPointer {
+    return UnsafeRawPointer(Unmanaged.passUnretained(obj).toOpaque())
+}
+
+func bridge<T : AnyObject>(ptr : UnsafeRawPointer) -> T {
+    return Unmanaged<T>.fromOpaque(ptr).takeUnretainedValue()
+}
+
+func bridgeRetained<T : AnyObject>(obj : T) -> UnsafeRawPointer {
+    return UnsafeRawPointer(Unmanaged.passRetained(obj).toOpaque())
+}
+
+func bridgeTransfer<T : AnyObject>(ptr : UnsafeRawPointer) -> T {
+    return Unmanaged<T>.fromOpaque(ptr).takeRetainedValue()
 }
